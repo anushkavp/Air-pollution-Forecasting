@@ -8,6 +8,7 @@ pd.set_option('display.max_columns', None)
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
+from statsmodels.tsa.seasonal import STL, seasonal_decompose
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -80,44 +81,101 @@ print("y_test shape: ",y_test.shape)
 ################
 # Stationarity
 ################
-print("\n\n\nStationarity Test:")
-# Plot rolling mean and variance of Air pollution
-Plot_Rolling_Mean_Var(df,"pollution")
-
-# ADF test for original dataset
-print("\nADF Test for Beijing Air Pollution dataset:")
-ADF_Cal(df.loc[:,"pollution"])
-
-# KPSS test for original dataset
-print("\nKPSS Test for Beijing Air Pollution dataset:")
-kpss_test(df.loc[:,"pollution"])
-
-# Applying first order differencing
-df["First Order Differencing"]=0
-for i in range(1,len(df)):
-    # First Order Differencing
-    df["First Order Differencing"].iloc[i]= (
-            df["pollution"].iloc[i] -
-            df["pollution"].iloc[i-1])
-
-df.to_csv("df_stationarized.csv")
-df_stationarized = pd.read_csv("df_stationarized.csv")
-
-# Plot rolling mean and variance of first order differenced dataset
-Plot_Rolling_Mean_Var(df_stationarized, "First Order Differencing")
-
-# ADF test
-print("\nADF Test for First Order transformation:")
-ADF_Cal(df.loc[:,"First Order Differencing"])
-
-# KPSS test
-print("\nKPSS Test for First Order transformation:")
-kpss_test(df.loc[:,"First Order Differencing"])
-
-Cal_autocorrelation(df["pollution"],20,"ACF function of Beijing Air pollution")
-Cal_autocorrelation(df["First Order Differencing"],20,"ACF function of First Order Differencing of air pollution")
+# print("\n\n\nStationarity Test:")
+# # Plot rolling mean and variance of Air pollution
+# Plot_Rolling_Mean_Var(df,"pollution")
+#
+# # ADF test for original dataset
+# print("\nADF Test for Beijing Air Pollution dataset:")
+# ADF_Cal(df.loc[:,"pollution"])
+#
+# # KPSS test for original dataset
+# print("\nKPSS Test for Beijing Air Pollution dataset:")
+# kpss_test(df.loc[:,"pollution"])
+#
+# # Applying first order differencing
+# df["First Order Differencing"]=0
+# for i in range(1,len(df)):
+#     # First Order Differencing
+#     df["First Order Differencing"].iloc[i]= (
+#             df["pollution"].iloc[i] -
+#             df["pollution"].iloc[i-1])
+#
+# df.to_csv("df_stationarized.csv")
+# df_stationarized = pd.read_csv("df_stationarized.csv")
+#
+# # Plot rolling mean and variance of first order differenced dataset
+# Plot_Rolling_Mean_Var(df_stationarized, "First Order Differencing")
+#
+# # ADF test
+# print("\nADF Test for First Order transformation:")
+# ADF_Cal(df.loc[:,"First Order Differencing"])
+#
+# # KPSS test
+# print("\nKPSS Test for First Order transformation:")
+# kpss_test(df.loc[:,"First Order Differencing"])
+#
+# Cal_autocorrelation(df["pollution"],20,"ACF function of Beijing Air pollution")
+# Cal_autocorrelation(df["First Order Differencing"],20,"ACF function of First Order Differencing of air pollution")
 
 ################
 # Time Series Decomposition
 ################
 print("\n\nTime Series Decomposition")
+stl = STL(df["pollution"])
+res = stl.fit()
+
+fig = res.plot()
+fig.set_size_inches(12, 10)
+plt.xlabel("Date")
+fig.suptitle("Air Pollution Time Series Decomposition")
+plt.show()
+
+
+T = res.trend
+S = res.seasonal
+R=res.resid
+
+plt.figure(figsize=(12,10))
+plt.plot(df["pollution"].iloc[:50], label="Original air pollution")
+plt.plot(T[:50], label="Trend")
+plt.plot(S[:50], label="Seasonality")
+plt.plot(R[:50], label="Residuals")
+plt.xlabel("Date")
+plt.ylabel("Air Pollution PM2.5 levels")
+plt.title("Air Pollution Time Series Decomposition for first 50 values")
+plt.xticks(rotation = 45)
+plt.legend()
+plt.grid()
+plt.show()
+
+seasonally_adjusted_data = T+R
+plt.figure(figsize=(12,9))
+plt.plot(df["pollution"].iloc[:50],label="pollution")
+plt.plot(seasonally_adjusted_data.iloc[:50],label="Seasonally Adjusted line")
+plt.title("Seasonally adjusted data vs Original data for air pollution")
+plt.xlabel('Date')
+plt.ylabel('Pollution PM2.5 levels')
+plt.xticks(rotation=45)
+plt.grid()
+plt.legend()
+plt.show()
+
+# detrended_data = S+R
+# plt.figure(figsize=(12,9))
+# plt.plot(df["pollution"].iloc[:50],label="pollution")
+# plt.plot(detrended_data.iloc[:50],label="Detrended line")
+# plt.title("Detrended data vs Original data for air pollution")
+# plt.xlabel('Date')
+# plt.ylabel('Pollution PM2.5 levels')
+# plt.xticks(rotation=45)
+# plt.grid()
+# plt.legend()
+# plt.show()
+
+strength_of_trend = max(0,(1-(np.var(R)/(np.var(T+R)))))
+print("The strength of trend for the air pollution levels is = "+ str(np.round(strength_of_trend*100,3))+"%")
+
+strength_of_seasonality = max(0,(1-(np.var(R)/(np.var(S+R)))))
+print("The strength of Seasonality for the air pollution levels is = "+ str(np.round((strength_of_seasonality)*100,3))+ "%")
+
