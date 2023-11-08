@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 from statsmodels.tools.sm_exceptions import InterpolationWarning
+import statsmodels.tsa.holtwinters as ets
 
 pd.set_option('display.max_columns', None)
 import seaborn as sns
@@ -71,7 +72,7 @@ plt.show()
 print("\n\nSplitting data into train and test")
 y=df["pollution"]
 x=df.loc[:, df.columns != 'pollution']
-x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=6313)
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=6313, shuffle= False)
 print("x_train shape: ",x_train.shape)
 print("y_train shape: ",y_train.shape)
 print("x_test shape: ",x_test.shape)
@@ -137,6 +138,19 @@ S = res.seasonal
 R=res.resid
 
 plt.figure(figsize=(12,10))
+plt.plot(df["pollution"], label="Original air pollution")
+plt.plot(T, label="Trend")
+plt.plot(S, label="Seasonality")
+plt.plot(R, label="Residuals")
+plt.xlabel("Date")
+plt.ylabel("Air Pollution PM2.5 levels")
+plt.title("Air Pollution Time Series Decomposition for all values")
+plt.xticks(rotation = 45)
+plt.legend()
+plt.grid()
+plt.show()
+
+plt.figure(figsize=(12,10))
 plt.plot(df["pollution"].iloc[:50], label="Original air pollution")
 plt.plot(T[:50], label="Trend")
 plt.plot(S[:50], label="Seasonality")
@@ -179,3 +193,61 @@ print("The strength of trend for the air pollution levels is = "+ str(np.round(s
 strength_of_seasonality = max(0,(1-(np.var(R)/(np.var(S+R)))))
 print("The strength of Seasonality for the air pollution levels is = "+ str(np.round((strength_of_seasonality)*100,3))+ "%")
 
+
+################
+# Holt-Winter Method
+################
+print("\n\nHolt Winters Method")
+holtt = ets.ExponentialSmoothing(y_train,trend=None,damped=False,seasonal=None).fit()
+holtf = holtt.forecast(steps=len(y_test))
+holtf = pd.DataFrame(holtf).set_index(y_test.index)
+MSE = np.square(np.subtract(y_test.values,np.ndarray.flatten(holtf.values))).mean()
+print("Mean square error for simple exponential smoothing is ", MSE)
+
+
+fig, ax = plt.subplots()
+ax.plot(y_train,label= "Train Data")
+ax.plot(y_test,label= "Test Data")
+ax.plot(holtf,label= "Simple Exponential Smoothing")
+
+plt.legend(loc='upper left')
+plt.title('Simple Exponential Smoothing- Air Passengers')
+plt.xlabel('Time (Hourly)')
+plt.ylabel('Air pollution levels (PM2.5 concentration)')
+plt.show()
+
+
+y_train+=1
+holtt = ets.ExponentialSmoothing(y_train,trend='multiplicative',damped=True,seasonal=None).fit()
+holtf = holtt.forecast(steps=len(y_test))
+holtf = pd.DataFrame(holtf).set_index(y_test.index)
+MSE = np.square(np.subtract(y_test.values,np.ndarray.flatten(holtf.values))).mean()
+print("Mean square error for double exponential smoothing is ", MSE)
+fig, ax = plt.subplots()
+ax.plot(y_train,label= "Train Data")
+ax.plot(y_test,label= "Test Data")
+ax.plot(holtf,label= "Holt's Linear Trend Method")
+plt.legend(loc='upper left')
+plt.title("Holt's Linear Trend Method")
+plt.xlabel('Time (Hourly)')
+plt.ylabel('Air pollution levels (PM2.5 concentration)')
+plt.show()
+
+
+
+holtt = ets.ExponentialSmoothing(y_train,trend='multiplicative',damped=True,seasonal='mul').fit()
+holtf = holtt.forecast(steps=len(y_test))
+holtf = pd.DataFrame(holtf).set_index(y_test.index)
+MSE = np.square(np.subtract(y_test.values,np.ndarray.flatten(holtf.values))).mean()
+print("Mean square error for holt-winter method is ", MSE)
+
+
+fig, ax = plt.subplots()
+ax.plot(y_train,label= "Train data")
+ax.plot(y_test,label= "Test data")
+ax.plot(holtf,label= "Holt-Winter Method")
+plt.legend(loc='upper left')
+plt.title('Air pollution levels (PM2.5 concentration)')
+plt.xlabel('Time (Hourly)')
+plt.ylabel('Air Pollution levels')
+plt.show()
