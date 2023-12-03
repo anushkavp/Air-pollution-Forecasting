@@ -266,9 +266,14 @@ plt.show()
 
 holtt = ets.ExponentialSmoothing(y_train,trend="multiplicative",damped= True,seasonal='mul').fit()
 holtf = holtt.forecast(steps=len(y_test))
+holtf_train = holtt.forecast(steps=len(y_train))
+
 holtf = pd.DataFrame(holtf).set_index(y_test.index)
+holtf_train = pd.DataFrame(holtf_train).set_index(y_train.index)
 MSE = np.square(np.subtract(y_test.values,np.ndarray.flatten(holtf.values))).mean()
+MSE_train = np.square(np.subtract(y_train.values,np.ndarray.flatten(holtf_train.values))).mean()
 print("Mean square error of forecast errors for holt-winter method is ", MSE)
+print("Mean square error of residual errors for holt-winter method is ", MSE_train)
 Q = sm.stats.acorr_ljungbox(np.subtract(y_test.values,np.ndarray.flatten(holtf.values)), lags=[20], boxpierce=True, return_df=True)['bp_stat'].values[0]
 print("Q = ",Q)
 print("Mean of forecast errors:",np.mean(np.subtract(y_test.values,np.ndarray.flatten(holtf.values))))
@@ -455,8 +460,8 @@ gpac=Cal_GPAC(ry,8,8)
 # Parameter estimation:
 ## takes time to run
 na=4
-nb=0
-model = sm.tsa.statespace.SARIMAX(y_stationarized_train,order=(na,0,nb),seasonal_order=(0,1,0,24)).fit()
+nb=1
+model = sm.tsa.arima.ARIMA(y_stationarized_train,order=(na,0,nb),seasonal_order=(0,1,0,24)).fit()
 print(model.summary())
 # Prediction
 # Predict test values
@@ -477,7 +482,7 @@ Cal_autocorrelation(sarima_residual_error, 20, 'ACF of residuals')
 acf,shifted_indices,T=Cal_autocorrelation(sarima_residual_error, 40, 'ACF of residuals',show_fig=False)
 Cal_GPAC(acf[20:],7,7)
 # Cal_autocorrelation(sarima_forecast_error, 100, 'ACF of forecast errors')
-DOF = lags - na-nb
+DOF = 20 - na-nb
 alfa = 0.01
 from scipy.stats import chi2
 chi_critical = chi2.ppf(1-alfa, DOF)
@@ -514,7 +519,7 @@ plt.show()
 
 print("Mean of residuals = ",np.mean(sarima_forecast_error))
 print("Variance of residuals = ",np.var(sarima_forecast_error))
-mse_test_sarima = np.mean(np.square(sarima_forecast_error))
+mse_test_sarima = np.mean(np.square(y_stationarized_test)-np.square(model_hat))
 print("MSE test value of SARIMA model = ",mse_test_sarima)
 mse_train_sarima = np.mean(np.square(y_stationarized_train.values - model_hat_train.values))
 print("MSE train value of SARIMA model = ",mse_train_sarima)
@@ -522,20 +527,31 @@ rmse_test_sarima = np.sqrt(mse_test_sarima)
 print("RMSE test value of SARIMA model = ",rmse_test_sarima)
 
 # LM algorithm
-theta_new, sse_new, variance_hat, cov_mat,sse_list = lm_algorithm(np.array(y_stationarized_train.dropna()),4,0,len(y_stationarized_train))
+theta_new, sse_new, variance_hat, cov_mat,sse_list = lm_algorithm(np.array(y_stationarized_train),na,nb,len(y_stationarized_train))
 print("theta = ",theta_new)
+theta2 = np.array(theta_new).reshape(-1)
+for i in range(na + nb):
+    if i < na:
+        print('The AR coefficient {} is: {:.3f}'.format(i + 1, np.round(theta2[i], 3)))
+    else:
+        print('The MA coefficient {} is: {:.3f}'.format(i + 1 - na, np.round(theta2[i], 3)))
 print("\nCovariance Matrix: \n",cov_mat)
 print("Variance of error: ",variance_hat)
 # sse_vs_iteration_plot(sse_list)
+lower_bound, upper_bound = lm_algorithm_confidence_interval(na,nb,theta_new,cov_mat)
+print("Confidence Intervals with lower and upper bound:")
+for i in range(len(theta_new)):
+    print(np.round(lower_bound[i][0],3) , " < ", np.round(theta_new[i][0],3)," < ", np.round(upper_bound[i][0],3))
+roots_zero_pole_check(na,nb,theta_new)
 
 # inverse differencing of predicted values for plotting
 predicted_values = abs(y_stationarized_test.shift(1)) + abs(model_hat)
 # Prediction plot
-plt.plot(y_train,label="Training Price")
-plt.plot(y_test,label="Test Price")
-plt.plot(predicted_values,label="Predicted Price")
+plt.plot(y_train,label="Training values")
+plt.plot(y_test,label="Test values")
+plt.plot(predicted_values,label="Predicted values")
 plt.grid()
-plt.title("Predicting prices using SARIMA model ")
+plt.title("Predicting Pollution levels using SARIMA model ")
 plt.xlabel('Sample')
 plt.ylabel('Pollution')
 plt.legend()

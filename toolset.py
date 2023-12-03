@@ -540,8 +540,12 @@ def lm_algorithm_confidence_interval(na,nb,theta_new,cov_mat):
     lower_bound=[]
     upper_bound=[]
     for i in range(na+nb):
-        lower_bound.append(theta_new[i] - 2*np.sqrt(cov_mat[i][i]))
-        upper_bound.append(theta_new[i] + 2 * np.sqrt(cov_mat[i][i]))
+        if (cov_mat[i][i] <0):
+            lower_bound.append(theta_new[i] + 2 * (-1*np.sqrt(abs(cov_mat[i][i]))))
+            upper_bound.append(theta_new[i] - 2 * (-1*np.sqrt(abs(cov_mat[i][i]))))
+        else:
+            lower_bound.append(theta_new[i] - 2*np.sqrt(cov_mat[i][i]))
+            upper_bound.append(theta_new[i] + 2 * np.sqrt(cov_mat[i][i]))
     # print("lower bound : ",lower_bound)
     # print("upper bound : ",upper_bound)
     return lower_bound,upper_bound
