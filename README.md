@@ -9,3 +9,4 @@ It has several other parameters too in play such as, the temperature, pressure, 
 
 To run this file, just run "Beijing_air_pollution_timeseries_project.py". This file internally uses "toolset.py" which contains helper or utility functions that help run the main file.
 
+** Takes about 10 mins to run the python file

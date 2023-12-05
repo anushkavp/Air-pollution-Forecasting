@@ -151,8 +151,8 @@ plt.show()
 # Time Series Decomposition
 ################
 print("\n\nTime Series Decomposition")
-# takes a while to run for annual period. Keeping it as 24 for now
-stl = STL(df["pollution"],period=24) # period = 365/8760, pls change later; tbd
+# takes a while to run for annual periodicity
+stl = STL(df["pollution"],period=8760)
 res = stl.fit()
 
 fig = res.plot()
