@@ -387,10 +387,14 @@ print(model.summary())
 
 # Prediction
 y_predicted = model.predict(sm.add_constant(scaled_x_test[columns_retained]))
+y_train_predicted = model.predict(sm.add_constant(scaled_x_train[columns_retained]))
 
 prediction_error = y_test.values - y_predicted.values
+linear_regression_residual_error = y_train.values - y_train_predicted.values
 y_predicted.index = y_test.index
-Cal_autocorrelation(prediction_error,50,"ACF of prediction errors: Linear Regression")
+y_train_predicted.index = y_train.index
+# Cal_autocorrelation(prediction_error,50,"ACF of prediction errors: Linear Regression")
+Cal_autocorrelation(linear_regression_residual_error,50,"ACF of residual errors: Linear Regression")
 
 # Prediction plot
 plt.plot(y_train,label="Trained Pollution values")
